@@ -10,7 +10,10 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:todo-list.openWebviewCommand"
+    "onCommand:todo-list.openWebviewCommand",
+    "onCommand:todo-list.deleteItem",
+    "onCommand:todo-list.editItem",
+    "onCommand:todo-list.addItem"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -18,7 +21,7 @@
       "activitybar": [
         {
           "id": "my-todo-extension",
-          "title": "Tasfik's todo",
+          "title": "Tasfik's",
           "icon": "images/todo-icon-2.png"
         }
       ]
@@ -35,8 +38,47 @@
       {
         "command": "todo-list.openWebviewCommand",
         "title": "Open Webview"
+      },
+      {
+        "command": "todo-list.deleteItem",
+        "title": "Delete Item"
+      },
+      {
+        "command": "todo-list.editItem",
+        "title": "Edit Item"
+      },
+      {
+        "command": "todo-list.addItem",
+        "title": "Add New List",
+        "icon": "images/add-list-2.png" 
       }
-    ]
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "todo-list.openWebviewCommand",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        },
+        {
+          "command": "todo-list.deleteItem",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        },
+        {
+          "command": "todo-list.editItem",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "todo-list.addItem",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "lint": "eslint .",

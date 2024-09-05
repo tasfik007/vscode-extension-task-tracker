@@ -6,19 +6,27 @@ class TodoTreeDataProvider {
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
     this.items = [
-      { id: "todoList1", label: "Todo List 1" },
-      { id: "todoList2", label: "Todo List 2" }
+      { id: 1, label: "Todo List 1" },
+      { id: 2, label: "Todo List 2" }
     ]; // Store these to access later
   }
 
   getTreeItem(element) {
     const treeItem = new vscode.TreeItem(element.label);
+	treeItem.iconPath = new vscode.ThemeIcon('output');
     treeItem.command = {
       command: "todo-list.openWebviewCommand",
       title: "Open details",
       arguments: [element]
     };
     return treeItem;
+  }
+
+  addElement() {
+    const id = this.items.length + 1;
+    const newItem = { id, label: "Todo List "+id };
+    this.items.push(newItem);
+    this.refresh();
   }
 
   getChildren() {
@@ -100,6 +108,20 @@ function activate(context) {
       }, null, context.subscriptions);
     })
   );
+
+  context.subscriptions.push(
+	vscode.commands.registerCommand('todo-list.editItem', (item) => {
+	  // Handle item editing
+	  vscode.window.showInformationMessage(`Edit item ${item.label}`);
+	}));
+
+  context.subscriptions.push(
+	vscode.commands.registerCommand('todo-list.addItem', () => {
+	  // Handle Add item
+	  treeDataProvider.addElement();
+	  vscode.window.showInformationMessage(`New List Added`);
+	}));
+
 }
 
 function getWebviewContent(isChecked, item) {
