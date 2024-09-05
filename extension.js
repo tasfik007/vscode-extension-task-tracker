@@ -1,107 +1,150 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-
-/**
- * @param {vscode.ExtensionContext} context
- */
-function activate(context) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "todo-list" is now active!');
-
-	const isChecked = context.globalState.get('isChecked');
-	console.log("Checked: ", isChecked);
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('todo-list.todo', function () {
-		// The code you place here will be executed every time your command is executed
-		const panel = vscode.window.createWebviewPanel(
-			'checkboxView', // Identifies the type of the webview
-			'Checkbox View', // Title of the panel
-			vscode.ViewColumn.One, // Editor column to show the new webview panel
-			{
-				enableScripts: true // Allow scripts to run in the webview
-			} // Webview options
-		  );
-	  
-		  // Set the HTML content of the webview
-		  panel.webview.html = getWebviewContent({isChecked});
-		  
-		  // Handle messages from the webview
-		  panel.webview.onDidReceiveMessage(
-			message => {
-			  switch (message.command) {
-				case 'toggleCheckbox':
-				  vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
-				  context.globalState.update('isChecked', message.checked ? true : false );
-				  break;
-			  }
-			},
-			undefined,
-			context.subscriptions
-		  );
-
-		// Display a message box to the user
-		// vscode.window.showInformationMessage('Welcome to Tasfik\'s todo-list extension!');
-		
-	});
-
-	context.subscriptions.push(disposable);
-}
-
-function getWebviewContent(data) {
-	return `
-	  <!DOCTYPE html>
-	  <html lang="en">
-	  <head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Checkbox View</title>
-		<style>
-		  body {
-			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-			padding: 10px;
-		  }
-		  label {
-			display: block;
-			font-size: 18px;
-			margin-top: 10px;
-		  }
-		</style>
-	  </head>
-	  <body>
-		<h2>Checkbox Example</h2>
-		<label>
-		  <input type="checkbox" id="checkbox" ${data.isChecked ? 'checked' : ''}>
-		  Toggle me!
-		</label>
-		<script>
-		  const vscode = acquireVsCodeApi();
-		  document.getElementById('checkbox').addEventListener('change', (event) => {
-			vscode.postMessage({
-			  command: 'toggleCheckbox',
-			  checked: event.target.checked
-			});
-		  });
-		</script>
-	  </body>
-	  </html>
-	`;
+class TodoTreeDataProvider {
+  constructor(context) {
+    this.context = context;
+    this._onDidChangeTreeData = new vscode.EventEmitter();
+    this.onDidChangeTreeData = this._onDidChangeTreeData.event;
+    this.items = [
+      { id: "todoList1", label: "Todo List 1" },
+      { id: "todoList2", label: "Todo List 2" }
+    ]; // Store these to access later
   }
 
-  
+  getTreeItem(element) {
+    const treeItem = new vscode.TreeItem(element.label);
+    treeItem.command = {
+      command: "todo-list.openWebviewCommand",
+      title: "Open details",
+      arguments: [element]
+    };
+    return treeItem;
+  }
 
-// This method is called when your extension is deactivated
+  getChildren() {
+    return this.items;
+  }
+
+  getParent(element) {
+    return null; // Since our items are at the root level, they have no parent
+  }
+
+  refresh() {
+    this._onDidChangeTreeData.fire();
+  }
+
+  // Function to get an item by ID
+  getItemById(id) {
+    return this.items.find(item => item.id === id);
+  }
+}
+
+let panel = {};
+
+function activate(context) {
+  const treeDataProvider = new TodoTreeDataProvider(context);
+  
+  const treeView = vscode.window.createTreeView('todoTreeView', { treeDataProvider });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('todo-list.openWebviewCommand', (item) => {
+	  let isChecked = context.globalState.get('isChecked#' + item.id, false);
+	  
+      // Focus existing panel if it exists
+      if (panel[item.id]) {
+        panel[item.id].webview.html = getWebviewContent(isChecked, item);
+        panel[item.id].reveal(vscode.ViewColumn.One);
+        return;
+      }
+
+      // Create new webview panel
+      panel[item.id] = vscode.window.createWebviewPanel(
+        'checkboxView',
+        item.label,
+        vscode.ViewColumn.One,
+        { enableScripts: true }
+      );
+
+      panel[item.id].webview.html = getWebviewContent(isChecked, item);
+
+      panel[item.id].webview.onDidReceiveMessage(
+        message => {
+          switch (message.command) {
+            case 'toggleCheckbox':
+              vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
+              context.globalState.update('isChecked#' + item.id, message.checked ? true : false);
+              break;
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
+
+      // Handle webview focus changes
+      panel[item.id].onDidChangeViewState(
+        e => {
+          if (e.webviewPanel.visible) {
+            const isChecked = context.globalState.get('isChecked#' + item.id, false);
+            e.webviewPanel.webview.html = getWebviewContent(isChecked, item);
+
+            // Find the corresponding tree item and update the selection
+            treeView.reveal(item, { focus: true, select: true });
+          }
+        },
+        null,
+        context.subscriptions
+      );
+
+      panel[item.id].onDidDispose(() => {
+        panel[item.id] = null;
+      }, null, context.subscriptions);
+    })
+  );
+}
+
+function getWebviewContent(isChecked, item) {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${item.label}</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+          padding: 10px;
+        }
+        label {
+          display: block;
+          font-size: 18px;
+          margin-top: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <h2>${item.label}</h2>
+      <label>
+        <input type="checkbox" id="checkbox" ${isChecked ? 'checked' : ''}>
+        Todo Item 01
+      </label>
+      <script>
+        const vscode = acquireVsCodeApi();
+        document.getElementById('checkbox').addEventListener('change', (event) => {
+          vscode.postMessage({
+            command: 'toggleCheckbox',
+            checked: event.target.checked
+          });
+        });
+      </script>
+    </body>
+    </html>
+  `;
+}
+
 function deactivate() {}
 
 module.exports = {
-	activate,
-	deactivate
-}
+  activate,
+  deactivate
+};

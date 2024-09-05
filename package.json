@@ -1,6 +1,6 @@
 {
   "name": "todo-list",
-  "displayName": "todo-list",
+  "displayName": "Todo List",
   "description": "A todo app to track user's progress",
   "version": "0.0.1",
   "engines": {
@@ -9,31 +9,34 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:todo-list.openWebviewCommand"
+  ],
   "main": "./extension.js",
   "contributes": {
     "viewsContainers": {
-    "activitybar": [
+      "activitybar": [
+        {
+          "id": "my-todo-extension",
+          "title": "Tasfik's todo",
+          "icon": "images/todo-icon-2.png"
+        }
+      ]
+    },
+    "views": {
+      "my-todo-extension": [
+        {
+          "id": "todoTreeView",
+          "name": "Todo List"
+        }
+      ]
+    },
+    "commands": [
       {
-        "id": "my-todo-extension",
-        "title": "Tasfik's todo",
-        "icon": "images/todo-icon-2.png"
+        "command": "todo-list.openWebviewCommand",
+        "title": "Open Webview"
       }
     ]
-  },
-  "views": {
-    "my-todo-extension": [
-      {
-        "id": "todoListView",
-        "name": "Todo List"
-      }
-    ]
-  },
-    "commands": [{
-      "command": "todo-list.todo",
-      "title": "todo"
-    }
-  ]
   },
   "scripts": {
     "lint": "eslint .",
