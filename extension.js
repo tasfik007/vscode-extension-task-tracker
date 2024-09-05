@@ -1,14 +1,12 @@
 const vscode = require('vscode');
+const path = require('path');
 
 class TodoTreeDataProvider {
   constructor(context) {
     this.context = context;
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
-    this.items = [
-      { id: 1, label: "Todo List 1" },
-      { id: 2, label: "Todo List 2" }
-    ]; // Store these to access later
+    this.items = []; // Store these to access later
   }
 
   getTreeItem(element) {
@@ -24,9 +22,21 @@ class TodoTreeDataProvider {
 
   addElement() {
     const id = this.items.length + 1;
-    const newItem = { id, label: "Todo List "+id };
-    this.items.push(newItem);
+    const newList = { id, label: "Todo List "+id, items: [
+		{id: 1, label: "Todo Item 01", checked: false},
+		{id: 2, label: "Todo Item 02", checked: false}
+	] };
+    this.items.push(newList);
+	this.context.globalState.update('todoLists', this.items);
+	this.context.globalState.update(id, newList);
     this.refresh();
+	return newList;
+  }
+
+  removeElement(selectedItem) {
+	this.items = this.items.filter(item => item.id !== selectedItem.id);
+	this.context.globalState.update('todoLists', this.items);
+	this.refresh();
   }
 
   getChildren() {
@@ -51,16 +61,20 @@ let panel = {};
 
 function activate(context) {
   const treeDataProvider = new TodoTreeDataProvider(context);
+  const todoLists = context.globalState.get('todoLists', []);
+  treeDataProvider.items = todoLists;
   
   const treeView = vscode.window.createTreeView('todoTreeView', { treeDataProvider });
 
   context.subscriptions.push(
     vscode.commands.registerCommand('todo-list.openWebviewCommand', (item) => {
-	  let isChecked = context.globalState.get('isChecked#' + item.id, false);
+	  let selectedList = context.globalState.get(item.id, {});
+	  console.log("selectedList: ", selectedList);
+	  console.log("item: ", item);
 	  
       // Focus existing panel if it exists
       if (panel[item.id]) {
-        panel[item.id].webview.html = getWebviewContent(isChecked, item);
+        panel[item.id].webview.html = getWebviewContent(panel[item.id].webview, context, selectedList);
         panel[item.id].reveal(vscode.ViewColumn.One);
         return;
       }
@@ -73,14 +87,18 @@ function activate(context) {
         { enableScripts: true }
       );
 
-      panel[item.id].webview.html = getWebviewContent(isChecked, item);
+      panel[item.id].webview.html = getWebviewContent(panel[item.id].webview, context, selectedList);
 
       panel[item.id].webview.onDidReceiveMessage(
         message => {
           switch (message.command) {
             case 'toggleCheckbox':
               vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
-              context.globalState.update('isChecked#' + item.id, message.checked ? true : false);
+			  const updatedItem = {...selectedList, items: selectedList.items?.map(item => item.id===message.id ? 
+				{...item, checked: message.checked ? true : false} : 
+				item
+			)};
+              context.globalState.update(item.id, updatedItem);
               break;
           }
         },
@@ -92,8 +110,8 @@ function activate(context) {
       panel[item.id].onDidChangeViewState(
         e => {
           if (e.webviewPanel.visible) {
-            const isChecked = context.globalState.get('isChecked#' + item.id, false);
-            e.webviewPanel.webview.html = getWebviewContent(isChecked, item);
+            let selectedList = context.globalState.get(item.id, item);
+            e.webviewPanel.webview.html = getWebviewContent(e.webviewPanel.webview, context, selectedList);
 
             // Find the corresponding tree item and update the selection
             treeView.reveal(item, { focus: true, select: true });
@@ -110,28 +128,47 @@ function activate(context) {
   );
 
   context.subscriptions.push(
-	vscode.commands.registerCommand('todo-list.editItem', (item) => {
+	vscode.commands.registerCommand('todo-list.deleteList', (selectedList) => {
 	  // Handle item editing
-	  vscode.window.showInformationMessage(`Edit item ${item.label}`);
+	  panel[selectedList.id]?.dispose();
+	  context.globalState.update(selectedList.id, {});
+	  treeDataProvider.removeElement(selectedList);
+	  vscode.window.showInformationMessage(`Deleted ${selectedList.label}`);
 	}));
 
   context.subscriptions.push(
 	vscode.commands.registerCommand('todo-list.addItem', () => {
 	  // Handle Add item
-	  treeDataProvider.addElement();
+	  let newlyAddedList = treeDataProvider.addElement();
+	  treeView.reveal(newlyAddedList, { focus: true, select: true });
+	  vscode.commands.executeCommand('todo-list.openWebviewCommand', newlyAddedList);
 	  vscode.window.showInformationMessage(`New List Added`);
 	}));
 
 }
 
-function getWebviewContent(isChecked, item) {
+function getWebviewUri(webview, context, relativePath) {
+	const mediaPath = vscode.Uri.joinPath(context.extensionUri, relativePath);
+    return webview.asWebviewUri(mediaPath);
+  }
+  
+
+function getWebviewContent(webView, context, selectedList) {
+	const itemsHtml = selectedList.items?.map(item => {
+		return `
+		  <label>
+			<input type="checkbox" id="${item.id}" ${item.checked ? "checked" : ""}>
+			${item.label}
+		  </label>
+		`;
+	  }).join('');
   return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${item.label}</title>
+      <title>${selectedList.label}</title>
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
@@ -145,20 +182,9 @@ function getWebviewContent(isChecked, item) {
       </style>
     </head>
     <body>
-      <h2>${item.label}</h2>
-      <label>
-        <input type="checkbox" id="checkbox" ${isChecked ? 'checked' : ''}>
-        Todo Item 01
-      </label>
-      <script>
-        const vscode = acquireVsCodeApi();
-        document.getElementById('checkbox').addEventListener('change', (event) => {
-          vscode.postMessage({
-            command: 'toggleCheckbox',
-            checked: event.target.checked
-          });
-        });
-      </script>
+      <h2>${selectedList.label}</h2>
+      ${itemsHtml}
+      <script src="${getWebviewUri(webView, context, 'extensionController.js')}"></script>
     </body>
     </html>
   `;

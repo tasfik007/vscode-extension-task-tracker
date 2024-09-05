@@ -34,8 +34,8 @@
         "title": "Open Webview"
       },
       {
-        "command": "todo-list.deleteItem",
-        "title": "Delete Item"
+        "command": "todo-list.deleteList",
+        "title": "Delete List"
       },
       {
         "command": "todo-list.editItem",
@@ -55,7 +55,7 @@
           "group": "navigation"
         },
         {
-          "command": "todo-list.deleteItem",
+          "command": "todo-list.deleteList",
           "when": "view == todoTreeView",
           "group": "navigation"
         },
