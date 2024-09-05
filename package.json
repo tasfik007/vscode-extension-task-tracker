@@ -9,12 +9,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:todo-list.openWebviewCommand",
-    "onCommand:todo-list.deleteItem",
-    "onCommand:todo-list.editItem",
-    "onCommand:todo-list.addItem"
-  ],
   "main": "./extension.js",
   "contributes": {
     "viewsContainers": {
