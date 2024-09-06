@@ -1,6 +1,24 @@
 const vscode = require('vscode');
 const path = require('path');
 
+/**
+ * TODO: 
+ * 0. Refactor code
+ * 1. Add a button in list webview
+ * 2. Add an item in a list dynamically
+ * 3. Store the state of newly added item in global state
+ * 4. Take input list name
+ * 5. Take input item name
+ * 6. Add a delete button in list webview
+ * 7. Remove item from a list
+ * 8. Edit list name
+ * 9. Edit item name
+ * 10. Add export functionality
+ * 11. Add import functionality
+ * 
+ * 
+ */
+
 class TodoTreeDataProvider {
   constructor(context) {
     this.context = context;
@@ -69,8 +87,6 @@ function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand('todo-list.openWebviewCommand', (item) => {
 	  let selectedList = context.globalState.get(item.id, {});
-	  console.log("selectedList: ", selectedList);
-	  console.log("item: ", item);
 	  
       // Focus existing panel if it exists
       if (panel[item.id]) {
