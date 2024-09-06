@@ -1,7 +1,5 @@
 (function() {
-    const vscode = acquireVsCodeApi();
-  
-    // Add event listeners to checkboxes
+    const vscode = acquireVsCodeApi();  
     function setupCheckboxes() {
       document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', (event) => {
@@ -12,9 +10,7 @@
           });
         });
       });
-    }
-  
-    // Initialize
+    }  
     setupCheckboxes();
   })();
   

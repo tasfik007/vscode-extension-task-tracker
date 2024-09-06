@@ -19,172 +19,176 @@ const path = require('path');
  * 
  */
 
-class TodoTreeDataProvider {
-  constructor(context) {
-    this.context = context;
-    this._onDidChangeTreeData = new vscode.EventEmitter();
-    this.onDidChangeTreeData = this._onDidChangeTreeData.event;
-    this.items = []; // Store these to access later
-  }
+class TodoListDrawer {
+	constructor(context) {
+		this.context = context;
+		this._onDidChangeTreeData = new vscode.EventEmitter();
+		// Fetch already saved todo lists and their data from global context
+		this.todoLists = context.globalState.get('todoLists', []) || [];
+	}
 
-  getTreeItem(element) {
-    const treeItem = new vscode.TreeItem(element.label);
-	treeItem.iconPath = new vscode.ThemeIcon('output');
-    treeItem.command = {
-      command: "todo-list.openWebviewCommand",
-      title: "Open details",
-      arguments: [element]
-    };
-    return treeItem;
-  }
+	getTreeItem(element) {
+		const treeItem = new vscode.TreeItem(element.label);
+		treeItem.iconPath = new vscode.ThemeIcon('output');
+		treeItem.command = {
+			command: "todo-list.openWebviewCommand",
+			title: "Open details",
+			arguments: [element]
+		};
+		return treeItem;
+	}
 
-  addElement() {
-    const id = this.items.length + 1;
-    const newList = { id, label: "Todo List "+id, items: [
-		{id: 1, label: "Todo Item 01", checked: false},
-		{id: 2, label: "Todo Item 02", checked: false}
-	] };
-    this.items.push(newList);
-	this.context.globalState.update('todoLists', this.items);
-	this.context.globalState.update(id, newList);
-    this.refresh();
-	return newList;
-  }
+	getChildren() {
+		return this.todoLists;
+	}
 
-  removeElement(selectedItem) {
-	this.items = this.items.filter(item => item.id !== selectedItem.id);
-	this.context.globalState.update('todoLists', this.items);
-	this.refresh();
-  }
+	getParent(element) {
+		return null; // Since our items are at the root level, they have no parent
+	}
 
-  getChildren() {
-    return this.items;
-  }
+	refresh() {
+		this._onDidChangeTreeData.fire();
+	}
 
-  getParent(element) {
-    return null; // Since our items are at the root level, they have no parent
-  }
+	getItemById(id) {
+		return this.todoLists.find(item => item.id === id);
+	}
 
-  refresh() {
-    this._onDidChangeTreeData.fire();
-  }
+	addList() {
+		const id = this.todoLists.length + 1;
+		const newList = {
+			id, label: "Todo List " + id, items: [
+				{ id: 1, label: "Todo Item 01", checked: false },
+				{ id: 2, label: "Todo Item 02", checked: false }
+			]
+		};
+		this.todoLists.push(newList);
+		this.context.globalState.update('todoLists', this.todoLists);
+		this.refresh();
+		return newList;
+	}
 
-  // Function to get an item by ID
-  getItemById(id) {
-    return this.items.find(item => item.id === id);
-  }
+	updateList(listToBeUpdated, message) {
+		const updatedTodoList = {
+			...listToBeUpdated, items: listToBeUpdated.items?.map(item => item.id === message.id ?
+				{ ...item, checked: message.checked ? true : false } :
+				item
+			)
+		};
+		this.todoLists = this.todoLists.map(tl => tl.id === listToBeUpdated.id ? updatedTodoList : tl);
+		this.context.globalState.update('todoLists', this.todoLists);
+	}
+
+	removeList(listToBeRemoved) {
+		this.todoLists = this.todoLists.filter(item => item.id !== listToBeRemoved.id);
+		this.context.globalState.update('todoLists', this.items);
+		this.refresh();
+	}
 }
 
 let panel = {};
 
 function activate(context) {
-  const treeDataProvider = new TodoTreeDataProvider(context);
-  const todoLists = context.globalState.get('todoLists', []);
-  treeDataProvider.items = todoLists;
-  
-  const treeView = vscode.window.createTreeView('todoTreeView', { treeDataProvider });
+	const todoListDrawer = new TodoListDrawer(context);
+	const treeView = vscode.window.createTreeView('todoTreeView', { treeDataProvider: todoListDrawer });
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand('todo-list.openWebviewCommand', (item) => {
-	  let selectedList = context.globalState.get(item.id, {});
-	  
-      // Focus existing panel if it exists
-      if (panel[item.id]) {
-        panel[item.id].webview.html = getWebviewContent(panel[item.id].webview, context, selectedList);
-        panel[item.id].reveal(vscode.ViewColumn.One);
-        return;
-      }
+	// Specific todolist selected (specific tab is opened)
+	context.subscriptions.push(
+		vscode.commands.registerCommand('todo-list.openWebviewCommand', (todoList) => {
+			let todoListSavedData = todoListDrawer.getItemById(todoList.id);
 
-      // Create new webview panel
-      panel[item.id] = vscode.window.createWebviewPanel(
-        'checkboxView',
-        item.label,
-        vscode.ViewColumn.One,
-        { enableScripts: true }
-      );
+			// Focus existing panel if it exists
+			if (panel[todoList.id]) {
+				panel[todoList.id].webview.html = getWebviewContent(panel[todoList.id].webview, context, todoListSavedData);
+				panel[todoList.id].reveal(vscode.ViewColumn.One);
+				return;
+			}
 
-      panel[item.id].webview.html = getWebviewContent(panel[item.id].webview, context, selectedList);
+			// Create new webview panel (new tab)
+			panel[todoList.id] = vscode.window.createWebviewPanel(
+				'checkboxView',
+				todoList.label,
+				vscode.ViewColumn.One,
+				{ enableScripts: true }
+			);
+			panel[todoList.id].webview.html = getWebviewContent(panel[todoList.id].webview, context, todoListSavedData);
 
-      panel[item.id].webview.onDidReceiveMessage(
-        message => {
-          switch (message.command) {
-            case 'toggleCheckbox':
-              vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
-			  const updatedItem = {...selectedList, items: selectedList.items?.map(item => item.id===message.id ? 
-				{...item, checked: message.checked ? true : false} : 
-				item
-			)};
-              context.globalState.update(item.id, updatedItem);
-              break;
-          }
-        },
-        undefined,
-        context.subscriptions
-      );
+			// Toggle todo item
+			panel[todoList.id].webview.onDidReceiveMessage(
+				message => {
+					switch (message.command) {
+						case 'toggleCheckbox':
+							todoListDrawer.updateList(todoList, message);
+							vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
+							break;
+					}
+				},
+				undefined,
+				context.subscriptions
+			);
 
-      // Handle webview focus changes
-      panel[item.id].onDidChangeViewState(
-        e => {
-          if (e.webviewPanel.visible) {
-            let selectedList = context.globalState.get(item.id, item);
-            e.webviewPanel.webview.html = getWebviewContent(e.webviewPanel.webview, context, selectedList);
+			// Handle webview focus changes (tab focus changes)
+			panel[todoList.id].onDidChangeViewState(
+				e => {
+					if (e.webviewPanel.visible) {
+						const currentTodoLists = context.globalState.get('todoLists', []);
+						const currentSelectedList = currentTodoLists.find(list => list.id === todoList.id) || {};
+						e.webviewPanel.webview.html = getWebviewContent(e.webviewPanel.webview, context, currentSelectedList);
 
-            // Find the corresponding tree item and update the selection
-            treeView.reveal(item, { focus: true, select: true });
-          }
-        },
-        null,
-        context.subscriptions
-      );
+						// Find the corresponding tree todoList and update the selection
+						treeView.reveal(currentSelectedList, { focus: true, select: true });
+					}
+				},
+				null,
+				context.subscriptions
+			);
 
-      panel[item.id].onDidDispose(() => {
-        panel[item.id] = null;
-      }, null, context.subscriptions);
-    })
-  );
+			panel[todoList.id].onDidDispose(() => {
+				panel[todoList.id] = null;
+			}, null, context.subscriptions);
+		})
+	);
 
-  context.subscriptions.push(
-	vscode.commands.registerCommand('todo-list.deleteList', (selectedList) => {
-	  // Handle item editing
-	  panel[selectedList.id]?.dispose();
-	  context.globalState.update(selectedList.id, {});
-	  treeDataProvider.removeElement(selectedList);
-	  vscode.window.showInformationMessage(`Deleted ${selectedList.label}`);
-	}));
+	// Delete List
+	context.subscriptions.push(
+		vscode.commands.registerCommand('todo-list.deleteList', (selectedList) => {
+			panel[selectedList.id]?.dispose();
+			todoListDrawer.removeList(selectedList);
+			vscode.window.showInformationMessage(`Deleted ${selectedList.label}`);
+		}));
 
-  context.subscriptions.push(
-	vscode.commands.registerCommand('todo-list.addItem', () => {
-	  // Handle Add item
-	  let newlyAddedList = treeDataProvider.addElement();
-	  treeView.reveal(newlyAddedList, { focus: true, select: true });
-	  vscode.commands.executeCommand('todo-list.openWebviewCommand', newlyAddedList);
-	  vscode.window.showInformationMessage(`New List Added`);
-	}));
-
+	// Add List
+	context.subscriptions.push(
+		vscode.commands.registerCommand('todo-list.addItem', () => {
+			let newlyAddedList = todoListDrawer.addList();
+			treeView.reveal(newlyAddedList, { focus: true, select: true });
+			vscode.commands.executeCommand('todo-list.openWebviewCommand', newlyAddedList);
+			vscode.window.showInformationMessage(`New List Added`);
+		}));
 }
 
 function getWebviewUri(webview, context, relativePath) {
 	const mediaPath = vscode.Uri.joinPath(context.extensionUri, relativePath);
-    return webview.asWebviewUri(mediaPath);
-  }
-  
+	return webview.asWebviewUri(mediaPath);
+}
 
-function getWebviewContent(webView, context, selectedList) {
-	const itemsHtml = selectedList.items?.map(item => {
+
+function getWebviewContent(webView, context, todoListSavedData) {
+	const itemsHtml = todoListSavedData.items?.map(item => {
 		return `
 		  <label>
 			<input type="checkbox" id="${item.id}" ${item.checked ? "checked" : ""}>
 			${item.label}
 		  </label>
 		`;
-	  }).join('');
-  return `
+	}).join('');
+	return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${selectedList.label}</title>
+      <title>${todoListSavedData.label}</title>
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
@@ -198,7 +202,7 @@ function getWebviewContent(webView, context, selectedList) {
       </style>
     </head>
     <body>
-      <h2>${selectedList.label}</h2>
+      <h2>${todoListSavedData.label}</h2>
       ${itemsHtml}
       <script src="${getWebviewUri(webView, context, 'extensionController.js')}"></script>
     </body>
@@ -206,9 +210,9 @@ function getWebviewContent(webView, context, selectedList) {
   `;
 }
 
-function deactivate() {}
+function deactivate() { }
 
 module.exports = {
-  activate,
-  deactivate
+	activate,
+	deactivate
 };
