@@ -45,6 +45,10 @@
         "command": "todo-list.addItem",
         "title": "Add New List",
         "icon": "images/add-list-2.png" 
+      },
+      {
+        "command": "todo-list.renameList",
+        "title": "Rename List"
       }
     ],
     "menus": {
@@ -63,6 +67,11 @@
           "command": "todo-list.editItem",
           "when": "view == todoTreeView",
           "group": "navigation"
+        },
+        {
+          "command": "todo-list.renameList",
+          "when": "view == todoTreeView",
+          "group": "inline"
         }
       ],
       "view/title": [

@@ -23,6 +23,7 @@ class TodoListDrawer {
 	constructor(context) {
 		this.context = context;
 		this._onDidChangeTreeData = new vscode.EventEmitter();
+		this.onDidChangeTreeData = this._onDidChangeTreeData.event;
 		// Fetch already saved todo lists and their data from global context
 		this.todoLists = context.globalState.get('todoLists', []) || [];
 	}
@@ -55,7 +56,7 @@ class TodoListDrawer {
 	}
 
 	addList() {
-		const id = this.todoLists.length + 1;
+		const id = `uid-${Date.now()}`;
 		const newList = {
 			id, label: "Todo List " + id, items: [
 				{ id: 1, label: "Todo Item 01", checked: false },
@@ -67,6 +68,14 @@ class TodoListDrawer {
 		this.refresh();
 		return newList;
 	}
+
+	renameList(listToBeRenamed, newLabel) {
+		const updatedList = {...listToBeRenamed, label: newLabel};
+		this.todoLists = this.todoLists.map(item => item.id === listToBeRenamed.id ? updatedList : item);
+		this.context.globalState.update('todoLists', this.todoLists);
+		this.refresh();
+		return updatedList;
+	  }
 
 	updateList(listToBeUpdated, message) {
 		const updatedTodoList = {
@@ -81,7 +90,7 @@ class TodoListDrawer {
 
 	removeList(listToBeRemoved) {
 		this.todoLists = this.todoLists.filter(item => item.id !== listToBeRemoved.id);
-		this.context.globalState.update('todoLists', this.items);
+		this.context.globalState.update('todoLists', this.todoLists);
 		this.refresh();
 	}
 }
@@ -165,6 +174,26 @@ function activate(context) {
 			vscode.commands.executeCommand('todo-list.openWebviewCommand', newlyAddedList);
 			vscode.window.showInformationMessage(`New List Added`);
 		}));
+	
+		context.subscriptions.push(
+			vscode.commands.registerCommand('todo-list.renameList', async (selectedList) => {
+			  const newName = await vscode.window.showInputBox({
+				prompt: 'Enter new name for the list',
+				placeHolder: selectedList.label,
+				value: selectedList.label
+			  });
+			  let updatedList;
+			  if (newName && newName !== selectedList.label) {
+				updatedList = todoListDrawer.renameList(selectedList, newName);
+				// If there's an open panel for this item, update its title
+				if (panel[selectedList.id]) {
+				  panel[selectedList.id].title = newName;
+				}
+			  }
+			  treeView.reveal(updatedList, { focus: true, select: true });
+			  vscode.commands.executeCommand('todo-list.openWebviewCommand', updatedList);
+			})
+		  );
 }
 
 function getWebviewUri(webview, context, relativePath) {
