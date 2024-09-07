@@ -86,6 +86,7 @@ class TodoListDrawer {
 		};
 		this.todoLists = this.todoLists.map(tl => tl.id === listToBeUpdated.id ? updatedTodoList : tl);
 		this.context.globalState.update('todoLists', this.todoLists);
+		return updatedTodoList;
 	}
 
 	removeList(listToBeRemoved) {
@@ -127,7 +128,8 @@ function activate(context) {
 				message => {
 					switch (message.command) {
 						case 'toggleCheckbox':
-							todoListDrawer.updateList(todoList, message);
+							const updatedList = todoListDrawer.updateList(todoList, message);
+							vscode.commands.executeCommand('todo-list.openWebviewCommand', updatedList);
 							vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
 							break;
 					}
@@ -205,10 +207,28 @@ function getWebviewUri(webview, context, relativePath) {
 function getWebviewContent(webView, context, todoListSavedData) {
 	const itemsHtml = todoListSavedData.items?.map(item => {
 		return `
-		  <label>
-			<input type="checkbox" id="${item.id}" ${item.checked ? "checked" : ""}>
-			${item.label}
-		  </label>
+		  <div style="
+        background-color: #f0f0f0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+      ">
+        <input type="checkbox" id="${item.id}" ${item.checked ? "checked" : ""} style="
+          margin-right: 10px;
+          width: 18px;
+          height: 18px;
+        ">
+        <label for="${item.id}" style="
+          font-size: 16px;
+          flex-grow: 1;
+		  color: black;
+          font-weight: bold;
+          ${item.checked ? "text-decoration: line-through; color: #888;" : ""}
+        ">${item.label}</label>
+      </div>
 		`;
 	}).join('');
 	return `

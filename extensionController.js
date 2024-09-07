@@ -5,7 +5,7 @@
         checkbox.addEventListener('change', (event) => {
           vscode.postMessage({
             command: 'toggleCheckbox',
-            id: Number(event.target.id),
+            id: event.target.id,
             checked: event.target.checked
           });
         });
