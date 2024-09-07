@@ -11,6 +11,14 @@
         });
       });
     }  
+    function addTask() {
+        document.getElementById('addTodo').addEventListener('click', (event) => {
+          vscode.postMessage({
+            command: 'addTodo',
+          });
+        });
+    }  
     setupCheckboxes();
+    addTask();
   })();
   

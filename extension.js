@@ -58,10 +58,7 @@ class TodoListDrawer {
 	addList() {
 		const id = `uid-${Date.now()}`;
 		const newList = {
-			id, label: "Todo List " + id, items: [
-				{ id: 1, label: "Todo Item 01", checked: false },
-				{ id: 2, label: "Todo Item 02", checked: false }
-			]
+			id, label: "Todo List " + id, items: []
 		};
 		this.todoLists.push(newList);
 		this.context.globalState.update('todoLists', this.todoLists);
@@ -88,11 +85,19 @@ class TodoListDrawer {
 		};
 		this.todoLists = this.todoLists.map(tl => tl.id === listToBeUpdated.id ? updatedTodoList : tl);
 		this.context.globalState.update('todoLists', this.todoLists);
-		return updatedTodoList;
 	}
 
 	removeList(listToBeRemoved) {
 		this.todoLists = this.todoLists.filter(item => item.id !== listToBeRemoved.id);
+		this.context.globalState.update('todoLists', this.todoLists);
+		this.refresh();
+	}
+
+	addTask(listId, label) {
+		const selectedList = this.getItemById(listId);
+		const newTask = { id: selectedList.items.length + 1, label, checked: false };
+		selectedList.items.push(newTask);
+		this.todoLists = this.todoLists.map(item => item.id === selectedList.id ? selectedList : item);
 		this.context.globalState.update('todoLists', this.todoLists);
 		this.refresh();
 	}
@@ -127,12 +132,22 @@ function activate(context) {
 
 			// Toggle todo item
 			panel[todoList.id].webview.onDidReceiveMessage(
-				message => {
+				async message => {
 					switch (message.command) {
 						case 'toggleCheckbox':
-							const updatedList = todoListDrawer.updateList(todoList.id, message);
-							vscode.commands.executeCommand('todo-list.openWebviewCommand', updatedList);
+							todoListDrawer.updateList(todoList.id, message);
+							vscode.commands.executeCommand('todo-list.openWebviewCommand', todoListDrawer.getItemById(todoList.id));
 							vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
+							break;
+						case 'addTodo':
+							console.log("Add new Todo: ", todoList.id);
+							const taskName = await vscode.window.showInputBox({
+									prompt: 'Enter task name',
+									placeHolder: 'Enter task name',
+									value: ''
+								});
+							todoListDrawer.addTask(todoList.id, taskName);
+							vscode.commands.executeCommand('todo-list.openWebviewCommand', todoListDrawer.getItemById(todoList.id));
 							break;
 					}
 				},
@@ -253,7 +268,26 @@ function getWebviewContent(webView, context, todoListSavedData) {
       </style>
     </head>
     <body>
-      <h2>${todoListSavedData.label}</h2>
+      <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      ">
+        <h2 style="
+          margin: 0;
+          font-size: 18px;
+        ">${todoListSavedData.label}</h2>
+        <button id="addTodo" style="
+          padding: 5px 10px;
+          cursor: pointer;
+          background-color: #4CAF50;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-size: 14px;
+        ">Add Task</button>
+      </div>
       ${itemsHtml}
       <script src="${getWebviewUri(webView, context, 'extensionController.js')}"></script>
     </body>
