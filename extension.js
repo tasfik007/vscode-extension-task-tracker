@@ -77,12 +77,14 @@ class TodoListDrawer {
 		return updatedList;
 	  }
 
-	updateList(listToBeUpdated, message) {
+	updateList(id, message) {
+		const listToBeUpdated = this.getItemById(id);
+		const updatedItems = listToBeUpdated.items?.map(item => item.id === message.id ?
+			{ ...item, checked: message.checked ? true : false } :
+			item
+		);
 		const updatedTodoList = {
-			...listToBeUpdated, items: listToBeUpdated.items?.map(item => item.id === message.id ?
-				{ ...item, checked: message.checked ? true : false } :
-				item
-			)
+			...listToBeUpdated, items: updatedItems
 		};
 		this.todoLists = this.todoLists.map(tl => tl.id === listToBeUpdated.id ? updatedTodoList : tl);
 		this.context.globalState.update('todoLists', this.todoLists);
@@ -128,7 +130,7 @@ function activate(context) {
 				message => {
 					switch (message.command) {
 						case 'toggleCheckbox':
-							const updatedList = todoListDrawer.updateList(todoList, message);
+							const updatedList = todoListDrawer.updateList(todoList.id, message);
 							vscode.commands.executeCommand('todo-list.openWebviewCommand', updatedList);
 							vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
 							break;
@@ -212,7 +214,7 @@ function getWebviewContent(webView, context, todoListSavedData) {
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin-bottom: 10px;
-        padding: 15px;
+        padding: 10px;
         display: flex;
         align-items: center;
       ">
