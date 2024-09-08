@@ -9,14 +9,14 @@
   "categories": [
     "Other"
   ],
-  "main": "./extension.js",
+  "main": "./main/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
           "id": "my-todo-extension",
           "title": "Tasfik's",
-          "icon": "images/todo-icon-2.png"
+          "icon": "resources/images/todo-icon.png"
         }
       ]
     },
@@ -52,7 +52,7 @@
       {
         "command": "todo-list.addItem",
         "title": "Add New List",
-        "icon": "images/add-list-2.png"
+        "icon": "resources/images/add-list.png"
       }
     ],
     "menus": {

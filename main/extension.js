@@ -1,7 +1,7 @@
 const path = require('path');
 const vscode = require('vscode');
-const TodoListDrawer = require('./services/TodoListDrawer');
-const { getWebviewContent } = require('./views/WebViewContent');
+const TodoListDrawer = require('../services/TodoListDrawer');
+const { getWebviewContent } = require('../views/WebViewContent');
 
 let panel = {};
 

@@ -92,8 +92,8 @@ function getWebviewContent(webView, context, todoListSavedData) {
           font-size: 14px;
         ">Add Task</button>
       </div>
-      ${itemsHtml}
-      <script src="${getWebviewUri(webView, context.extensionUri, 'extensionController.js')}"></script>
+      ${itemsHtml}      
+      <script src="${getWebviewUri(webView, context.extensionUri, './controllers/extension.controller.js')}"></script>
     </body>
     </html>
   `;
