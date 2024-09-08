@@ -1,6 +1,6 @@
 {
-  "name": "todo-list",
-  "displayName": "Todo List",
+  "name": "tasfik-todo",
+  "displayName": "tasfik-todo",
   "description": "A todo app to track user's progress",
   "version": "0.0.1",
   "engines": {
@@ -15,7 +15,7 @@
       "activitybar": [
         {
           "id": "my-todo-extension",
-          "title": "Tasfik's",
+          "title": "Tasfik's Todo App",
           "icon": "resources/images/todo-icon.png"
         }
       ]
