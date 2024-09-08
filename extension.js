@@ -3,15 +3,15 @@ const path = require('path');
 
 /**
  * TODO: 
- * 0. Refactor code
- * 1. Add a button in list webview
- * 2. Add an item in a list dynamically
- * 3. Store the state of newly added item in global state
- * 4. Take input list name
- * 5. Take input item name
- * 6. Add a delete button in list webview
+ * 0. Refactor code ✅
+ * 1. Add a button in list webview ✅
+ * 2. Add an item in a list dynamically ✅
+ * 3. Store the state of newly added item in global state ✅
+ * 4. Take input list name ❌
+ * 5. Take input item name ✅
+ * 6. Add a delete button in list webview ✅
  * 7. Remove item from a list
- * 8. Edit list name
+ * 8. Edit list name ✅
  * 9. Edit item name
  * 10. Add export functionality
  * 11. Add import functionality
@@ -101,6 +101,22 @@ class TodoListDrawer {
 		this.context.globalState.update('todoLists', this.todoLists);
 		this.refresh();
 	}
+
+	removeTask(listId, taskId) {
+		const selectedList = this.getItemById(listId);
+		selectedList.items = selectedList.items.filter(item => item.id !== taskId);
+		this.todoLists = this.todoLists.map(item => item.id === selectedList.id ? selectedList : item);
+		this.context.globalState.update('todoLists', this.todoLists);
+		this.refresh();
+	}
+	editTask(listId, taskId, content) {
+		const selectedList = this.getItemById(listId);
+		selectedList.items = selectedList.items.map(item => item.id === taskId ? {...item, label: content} : item);
+		this.todoLists = this.todoLists.map(item => item.id === selectedList.id ? selectedList : item);
+		this.context.globalState.update('todoLists', this.todoLists);
+		this.refresh();
+	}
+
 }
 
 let panel = {};
@@ -140,7 +156,6 @@ function activate(context) {
 							vscode.window.showInformationMessage(`Checkbox is now ${message.checked ? 'checked' : 'unchecked'}`);
 							break;
 						case 'addTodo':
-							console.log("Add new Todo: ", todoList.id);
 							const taskName = await vscode.window.showInputBox({
 									prompt: 'Enter task name',
 									placeHolder: 'Enter task name',
@@ -149,6 +164,19 @@ function activate(context) {
 							todoListDrawer.addTask(todoList.id, taskName);
 							vscode.commands.executeCommand('todo-list.openWebviewCommand', todoListDrawer.getItemById(todoList.id));
 							break;
+						case 'deleteTodo':
+							todoListDrawer.removeTask(todoList.id, message.id);
+							vscode.commands.executeCommand('todo-list.openWebviewCommand', todoListDrawer.getItemById(todoList.id));
+							break;
+						case 'editTodo':
+							const newTaskName = await vscode.window.showInputBox({
+								prompt: 'Enter task name',
+								placeHolder: 'Enter task name',
+								value: todoList.items.find(item => item.id === message.id).label
+							});
+						todoListDrawer.editTask(todoList.id, message.id, newTaskName);
+						vscode.commands.executeCommand('todo-list.openWebviewCommand', todoListDrawer.getItemById(todoList.id));
+						break;
 					}
 				},
 				undefined,
@@ -245,6 +273,31 @@ function getWebviewContent(webView, context, todoListSavedData) {
           font-weight: bold;
           ${item.checked ? "text-decoration: line-through; color: #888;" : ""}
         ">${item.label}</label>
+		<button class="editTask" id="${item.id}" style="
+          padding: 5px 10px;
+          cursor: pointer;
+          background-color: transparent;
+          color: #007bff;
+          border: none;
+          border-radius: 4px;
+          font-size: 16px;
+          margin-right: 10px;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">✎</button>
+		<button class="deleteTask" id="${item.id}" style="
+        background-color: transparent;
+        color: #ff4d4d;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 0 5px;
+        line-height: 1;
+      ">✖</button>
+    </div>
       </div>
 		`;
 	}).join('');
