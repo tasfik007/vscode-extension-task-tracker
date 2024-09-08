@@ -14,7 +14,6 @@ The Todo List extension for Visual Studio Code is a powerful tool to help you ma
 - Persistent storage of your todo lists
 - Clean and intuitive user interface
 
-![Todo List Extension](images/todo-list-screenshot.png)
 
 ## Installation
 
@@ -71,10 +70,6 @@ Initial release of the Todo List extension:
 ## Feedback and Contributions
 
 We welcome your feedback and contributions! Please visit our [GitHub repository](https://github.com/yourusername/todo-list-extension) to submit issues, feature requests, or pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 

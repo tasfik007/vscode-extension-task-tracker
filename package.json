@@ -2,7 +2,13 @@
   "name": "tasfik-todo",
   "displayName": "tasfik-todo",
   "description": "A todo app to track user's progress",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tasfik007/vscode-extension-task-tracker"
+  },
+  "publisher": "tasfik",
+  "icon": "resources/images/todo-icon.png",
   "engines": {
     "vscode": "^1.92.0"
   },
