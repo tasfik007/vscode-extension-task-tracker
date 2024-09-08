@@ -13,6 +13,14 @@
 		},
 		"sourceType": "module"
 	},
+	"root": true,
+	"parser": "@typescript-eslint/parser",
+	"plugins": ["@typescript-eslint", "prettier"],
+	"extends": [
+	  "eslint:recommended",
+	  "plugin:@typescript-eslint/recommended",
+	  "prettier"
+	],
 	"rules": {
 		"no-const-assign": "warn",
 		"no-this-before-super": "warn",
@@ -20,6 +28,14 @@
 		"no-unreachable": "warn",
 		"no-unused-vars": "warn",
 		"constructor-super": "warn",
-		"valid-typeof": "warn"
-	}
-}
+		"valid-typeof": "warn",
+		"prettier/prettier": "error",
+		"@typescript-eslint/naming-convention": "warn",
+		"@typescript-eslint/semi": "warn",
+		"curly": "warn",
+		"eqeqeq": "warn",
+		"no-throw-literal": "warn",
+		"semi": "off"
+	},
+	"ignorePatterns": ["out", "dist", "**/*.d.ts"]
+} 
