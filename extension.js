@@ -13,8 +13,8 @@ const path = require('path');
  * 7. Remove item from a list ✅
  * 8. Edit list name ✅
  * 9. Edit item name ✅
- * 10. Add export functionality
- * 11. Add import functionality
+ * 10. Add export functionality ✅
+ * 11. Add import functionality ✅
  * 12. Make code presentable
  * 
  */
