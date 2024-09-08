@@ -38,17 +38,21 @@
         "title": "Delete List"
       },
       {
-        "command": "todo-list.editItem",
-        "title": "Edit Item"
+        "command": "todo-list.renameList",
+        "title": "Rename List"
+      },
+      {
+        "command": "todo-list.export",
+        "title": "Export"
+      },
+      {
+        "command": "todo-list.import",
+        "title": "Import"
       },
       {
         "command": "todo-list.addItem",
         "title": "Add New List",
         "icon": "images/add-list-2.png" 
-      },
-      {
-        "command": "todo-list.renameList",
-        "title": "Rename List"
       }
     ],
     "menus": {
@@ -64,11 +68,6 @@
           "group": "navigation"
         },
         {
-          "command": "todo-list.editItem",
-          "when": "view == todoTreeView",
-          "group": "navigation"
-        },
-        {
           "command": "todo-list.renameList",
           "when": "view == todoTreeView",
           "group": "inline"
@@ -76,9 +75,19 @@
       ],
       "view/title": [
         {
-          "command": "todo-list.addItem",
+          "command": "todo-list.export",
           "when": "view == todoTreeView",
           "group": "navigation"
+        },
+        {
+          "command": "todo-list.import",
+          "when": "view == todoTreeView",
+          "group": "navigation"
+        },
+        {
+          "command": "todo-list.addItem",
+          "when": "view == todoTreeView",
+          "group": "navigation@3"
         }
       ]
     }

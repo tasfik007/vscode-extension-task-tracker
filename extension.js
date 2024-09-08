@@ -10,12 +10,12 @@ const path = require('path');
  * 4. Take input list name ❌
  * 5. Take input item name ✅
  * 6. Add a delete button in list webview ✅
- * 7. Remove item from a list
+ * 7. Remove item from a list ✅
  * 8. Edit list name ✅
- * 9. Edit item name
+ * 9. Edit item name ✅
  * 10. Add export functionality
  * 11. Add import functionality
- * 
+ * 12. Make code presentable
  * 
  */
 
@@ -220,6 +220,62 @@ function activate(context) {
 			treeView.reveal(newlyAddedList, { focus: true, select: true });
 			vscode.commands.executeCommand('todo-list.openWebviewCommand', newlyAddedList);
 			vscode.window.showInformationMessage(`New List Added`);
+		}));
+	
+	// Export
+	context.subscriptions.push(
+		vscode.commands.registerCommand('todo-list.export', () => {
+			const dataToCopy = JSON.stringify(todoListDrawer.getChildren(), null, 2);
+
+			vscode.env.clipboard.writeText(dataToCopy).then(() => {
+				vscode.window.showInformationMessage('Data copied to clipboard!');
+			  }, (error) => {
+				console.error('Failed to copy: ', error);
+				vscode.window.showErrorMessage('Failed to copy data to clipboard.');
+			  });
+		}));
+	
+	// Import
+	context.subscriptions.push(
+		vscode.commands.registerCommand('todo-list.import', async () => {
+			
+			// Show a warning that existing data will be replaced
+			const warningResult = await vscode.window.showWarningMessage(
+				'Importing will replace all existing todo lists. Do you want to continue?',
+				'Yes', 'No'
+			);
+	
+			if (warningResult !== 'Yes') {
+				return; // User chose not to proceed
+			}
+			const importedContent = await vscode.window.showInputBox({
+				prompt: 'Paste your exported todo list content here',
+				placeHolder: 'Paste JSON content...',
+				multiline: true
+			});
+	
+			if (!importedContent) {
+				return; // User cancelled or didn't input anything
+			}
+			try {
+				// Parse the imported content
+				const importedData = JSON.parse(importedContent);
+	
+				// Validate the imported data structure (you may want to add more thorough validation)
+				if (!Array.isArray(importedData)) {
+					throw new Error('Invalid import data structure');
+				}
+	
+				// Replace the global state with the imported content
+				context.globalState.update('todoLists', importedData);
+	
+				// Refresh the tree view to reflect the imported data
+				vscode.commands.executeCommand('workbench.action.reloadWindow');
+	
+				vscode.window.showInformationMessage('Todo lists imported successfully!');
+			} catch (error) {
+				vscode.window.showErrorMessage(`Failed to import: ${error.message}`);
+			}
 		}));
 	
 		context.subscriptions.push(
